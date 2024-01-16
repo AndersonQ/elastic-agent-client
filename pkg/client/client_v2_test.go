@@ -304,7 +304,7 @@ func testClientV2CheckinInitial(t *testing.T, localRPC string, serverCreds, clie
 		assert.Equal(t, wantAgentInfo.Version, agentInfo.Version)
 		assert.True(t, wantAgentInfo.Snapshot, agentInfo.Snapshot)
 	}
-	
+
 	assert.Truef(t, gotFQDN, "FQND should be true")
 
 	if assert.Lenf(t, units, 2, "should have received 2 units") {

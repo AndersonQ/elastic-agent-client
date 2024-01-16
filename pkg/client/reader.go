@@ -7,6 +7,7 @@ package client
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/elastic/elastic-agent-client/v7/pkg/proto"
+	"github.com/elastic/elastic-agent-libs/logp"
 )
 
 // ErrV2Unavailable error returned when Elastic Agent doesn't support V2.
@@ -64,14 +66,16 @@ func NewFromReader(reader io.Reader, impl StateInterface, actions ...Action) (Cl
 
 // NewV2FromReader creates a new V2 client reading the connection information from the io.Reader.
 func NewV2FromReader(reader io.Reader, ver VersionInfo, opts ...V2ClientOption) (V2, []Service, error) {
-	info := &proto.StartUpInfo{}
-	data, err := io.ReadAll(reader)
+	info, err := StartUpInfoFromReader(reader)
 	if err != nil {
 		return nil, nil, err
 	}
-	err = protobuf.Unmarshal(data, info)
+
+	bs, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
-		return nil, nil, err
+		logp.L().Warnf("could not marshal ident StartUpInfo: %v", err)
+	} else {
+		logp.L().Infow("StartUpInfo", "start_up_info", string(bs))
 	}
 
 	if info.AgentInfo != nil {
@@ -116,4 +120,18 @@ func NewV2FromReader(reader io.Reader, ver VersionInfo, opts ...V2ClientOption) 
 		services = append(services, Service(srv))
 	}
 	return client, services, nil
+}
+
+func StartUpInfoFromReader(reader io.Reader) (*proto.StartUpInfo, error) {
+	info := &proto.StartUpInfo{}
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	err = protobuf.Unmarshal(data, info)
+	if err != nil {
+		return nil, err
+	}
+
+	return info, nil
 }
